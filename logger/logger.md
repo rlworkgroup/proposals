@@ -11,3 +11,10 @@ The new logger will have one `add_output` method that takes in both the type of 
 It will also of course have a `log` method which takes in both the type of output (text by default) and the data to be sent to the logger. The type will use GarageLogger's dictionary to map to the correct OutputType, to which it will pass the data.
 
 The logger will also have python's standard `debug`, `info`, `warning`, `error`, and `critical` methods (even `checkpoint` as a separate log level?), which will log to the text output by default.
+
+It will retain functionality such as the prefix stack from the old logger.
+
+Questions for you all:
+- How should checkpoints be added to this system?
+- How should logs coming from separate processes be identified? A simple prefix?
+- Anything else you think I should add?
