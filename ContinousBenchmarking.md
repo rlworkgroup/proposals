@@ -39,6 +39,9 @@ This initial design will use a cron job script ran on a single local machine. On
 4. Run script to generate results page with plots.
 5. Deploy results.html to Github pages or similar.
 
+Perhaps we can just write a single Python script to accomplish steps 1 - 3? This way we can import the benchmarking scripts as modules, and run it like that.  For step 4, I am thinking we can just have a html/js template, and use grunt/gruntfile to do some simple replacements of data.
+
+There seems to be many options for step 5.  I'd appreciate all suggestions!
 
 ## Detailed Design (skip for now)
 Component-by-component sections, data, etc., as relevant to the particular system. These should include sketches of credible implementation plans mentioning specific technologies. They don't need to be so detailed that they are equivalent to writing the code.
