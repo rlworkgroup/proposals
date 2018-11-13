@@ -37,39 +37,40 @@ subprocess, etc.), you would do something like this (extracted from
 garage/envs/mujoco/gather/gather_env.py):
 
 ```python
-    from garage.core import Serializable
+from garage.core import Serializable
 
-    class GatherEnv(Serializable):
+class GatherEnv(Serializable):
 
-        def __init__(self, n_apples=8, n_bombs=8):
-            self.n_apples = n_apples
-            self.n_bombs = n_bombs
+    def __init__(self, n_apples=8, n_bombs=8):
+        self.n_apples = n_apples
+        self.n_bombs = n_bombs
 
-                # Always call Serializable constructor last
-            Serializable.quick_init(self, locals())
-
-    In experiment file (at least in principle):
-
-    env = GatherEnv(3, 2)
-
-    run_experiment(..., env=env)
-```
-
-I propose replacing it the following interface:
-
-```python
-
-  class GatherEnv:
-
-      def __init__(self, n_apples=8, n_bombs=8):
-          self.n_apples = n_apples
-          self.n_bombs = n_bombs
+            # Always call Serializable constructor last
+        Serializable.quick_init(self, locals())
 ```
 
 In experiment file (at least in principle):
 
 ```python
-  run_experiment(..., env_con=functools.partial(GatherEnv, 3, 2))
+env = GatherEnv(3, 2)
+
+run_experiment(..., env=env)
+```
+
+I propose replacing it the following interface:
+
+```python
+class GatherEnv:
+
+    def __init__(self, n_apples=8, n_bombs=8):
+        self.n_apples = n_apples
+        self.n_bombs = n_bombs
+```
+
+In experiment file (at least in principle):
+
+```python
+run_experiment(..., env_con=functools.partial(GatherEnv, 3, 2))
 ```
 
 For types with many parameters (e.g. most environments in practice),
@@ -78,24 +79,25 @@ handle that case, I’ve made a simple decorator to help split a class into a
 constructor type and the main type:
 
 ```python
-  class GatherEnvCon:
+class GatherEnvCon:
 
-      def __init__(self, n_apples=8, n_bombs=8):
-          self.n_apples = n_apples
-          self.n_bombs = n_bombs
+    def __init__(self, n_apples=8, n_bombs=8):
+        self.n_apples = n_apples
+        self.n_bombs = n_bombs
 
-  @constructed_by(GatherEnvCon)
-  class GatherEnv:
+@constructed_by(GatherEnvCon)
+class GatherEnv:
 
-      def __init__(self):
-          # constructor fields are already set
-          for apple in range(self.n_apples):
-              ...
+    def __init__(self):
+        # constructor fields are already set
+        for apple in range(self.n_apples):
+            ...
 ```
 
 In experiment file (at least in principle):
+
 ```python
-  run_experiment(..., env_con=GatherEnvCon(3, 2))
+run_experiment(..., env_con=GatherEnvCon(3, 2))
 ```
 
 A simple version of the source is in `constructor_simple.py`. I more
