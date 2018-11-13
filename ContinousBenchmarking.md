@@ -33,15 +33,25 @@ Problem starts with a code changes to Garage. The system needs to run benchmarki
 ## Design Overview
 *The input and output interfaces of the benchmarking scripts must be normalized (start commands, and results).
 This initial design will use a cron job script ran on a single local machine. On a nightly basis the script shall:
-1. pull the latest garage code.
+1. pull the latest garage code. 
 2. Run commands to launch benchmarking jobs
 3. Detect when the jobs are completed
 4. Run script to generate results page with plots.
 5. Deploy results.html to Github pages or similar.
 
-Perhaps we can just write a single Python script to accomplish steps 1 - 3? This way we can import the benchmarking scripts as modules, and run it like that.  For step 4, I am thinking we can just have a html/js template, and use grunt/gruntfile to do some simple replacements of data.
+###Options:
 
-There seems to be many options for step 5.  I'd appreciate all suggestions!
+####Python
+Perhaps we can just write a single Python script to accomplish steps 1 - 3? This way we can import the benchmarking scripts as modules, and run it like that.  
+
+####Shell 
+We need to launch the conda env after pulling the latest garage.  Maybe this workflow would be more appropriate as a shell script.  
+
+For step 4, I am thinking we can just have a html/js template, and use grunt/gruntfile to do some simple replacements of data.
+
+For step 5, There seems to be many options, I'd appreciate all suggestions!
+
+
 
 ## Detailed Design (skip for now)
 Component-by-component sections, data, etc., as relevant to the particular system. These should include sketches of credible implementation plans mentioning specific technologies. They don't need to be so detailed that they are equivalent to writing the code.
