@@ -4,7 +4,8 @@ Kevin Cheng
 Initial Proposal 11/6/18
 
 
-# Background:
+# Background
+
 ## Context
 Benchmarking an algorithm is a compute intensive and time consuming chore that is essential for guaranteeing performance. 
 An algorithm can unknowingly drift towards an undesirable state if the laborious task of benchmarking is neglected for
@@ -39,12 +40,12 @@ This initial design will use a cron job script ran on a single local machine. On
 4. Run script to generate results page with plots.
 5. Deploy results.html to Github pages or similar.
 
-###Options:
+### Options:
 
-####Python
+#### Python
 Perhaps we can just write a single Python script to accomplish steps 1 - 3? This way we can import the benchmarking scripts as modules, and run it like that.  
 
-####Shell 
+#### Shell 
 We need to launch the conda env after pulling the latest garage.  Maybe this workflow would be more appropriate as a shell script.  
 
 For step 4, I am thinking we can just have a html/js template, and use grunt/gruntfile to do some simple replacements of data.
