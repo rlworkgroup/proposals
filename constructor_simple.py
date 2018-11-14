@@ -34,7 +34,8 @@ def constructed_by(con_type):
             instance = constructed_type.__new__(constructed_type)
             instance.__dict__ = dict((k, copy.deepcopy(v))
                                      for k, v in constructor.__dict__.items())
-            instance.__init__()
+            if hasattr(instance, 'construct'):
+                instance.construct()
             return instance
 
         # Finish attaching to the constructor type.
@@ -49,6 +50,19 @@ class Constructor:
         # This should only happen if constructed_by wasn't used to attach the
         # specific Constructor type to a class.
         raise TypeError(f"{type(self).__name__} doesn't construct any type.")
+
+
+class Preconstructed:
+    '''
+    A constructor object which just returns copies of a given object.
+    '''
+
+    def __init__(self, to_copy):
+        self.to_copy = to_copy
+
+    def __call__(self):
+        return copy.deepcopy(self.to_copy)
+
 
 # Simple simulation of deploying a constructor.
 
@@ -78,6 +92,12 @@ import functools # pylint: disable=C0413
 test_deploy(functools.partial(MyEnv, 'MyEnv'))
 
 
+
+## Example using Preconstructed (this only works because MyEnv is picklable).
+
+test_deploy(Preconstructed(MyEnv('Preconstructed MyEnv')))
+
+
 ## Example with recommended practices.
 
 class ExampleEnvCon(Constructor):
@@ -95,10 +115,7 @@ class ExampleEnv(ExampleEnvCon):
     # To get better tab completion / pylint output, inherit from
     # ExampleEnvCon, even though we don't need to.
 
-    def __init__(self):
-        # If we inherit, we still don't need to call the Constructor __init__(), so
-        # tell pylint.
-        # pylint: disable=W0231
+    def construct(self):
         print(f"creating ExampleEnv with {self.width}, {self.height}")
         self._world = {}
 
@@ -123,7 +140,7 @@ class MinimalEnv:
     # We probably want the following:
     # pylint: disable=no-member
 
-    def __init__(self):
+    def construct(self):
         print(f"creating MinimalEnv with {self.width}, {self.height}")
         self._world = {}
 
@@ -143,7 +160,7 @@ class RepeatedCon:
 class FirstEnv:
     # pylint: disable=no-member
 
-    def __init__(self):
+    def construct(self):
         print(f"creating FirstEnv with {self.width}, {self.height}")
         self._world = {}
 

@@ -1,6 +1,22 @@
 #!/usr/bin/env python3
 import types
 
+def _copy_mode_to_function(mode):
+    '''
+    Convert `mode`, which is either `deep`, `shallow`, or a falsy value into
+    an appropriate function from the copy module.
+    '''
+    if mode:
+        import copy
+        if mode == 'deep':
+            return copy.deepcopy
+        elif mode == 'shallow':
+            return copy.copy
+        else:
+            raise TypeError(f'Invalid copy mode {mode}')
+    return lambda x: x
+
+
 def constructed_by(con_type, copy_values=False):
     '''
     Attach a constructor type to the provided type.
@@ -15,15 +31,7 @@ def constructed_by(con_type, copy_values=False):
     False or None.
     '''
     # Get the requested copy function.
-    copy_fn = lambda x: x
-    if copy_values:
-        import copy
-        if copy_values == 'deep':
-            copy_fn = copy.deepcopy
-        elif copy_values == 'shallow':
-            copy_fn = copy.copy
-        else:
-            raise TypeError(f'Invalid copy_values {copy_values}')
+    copy_fn = _copy_mode_to_function(copy_values)
 
     def constructed_by_decorator(constructed_type):
         # Check that we haven't already attached this constructor.
@@ -55,7 +63,8 @@ def constructed_by(con_type, copy_values=False):
                 for slot, value in inspect.getmembers(constructor):
                     if not slot.endswith('__'):
                         setattr(instance, slot, copy_fn(value))
-                instance.__init__()
+                if hasattr(instance, 'construct'):
+                    instance.construct()
                 return instance
         else:
             # Handle types without slots (this is faster).
@@ -65,14 +74,16 @@ def constructed_by(con_type, copy_values=False):
                     fields = constructor.__dict__.items()
                     instance.__dict__ = dict((k, copy_fn(v))
                                              for k, v in fields)
-                    instance.__init__()
+                    if hasattr(instance, 'construct'):
+                        instance.construct()
                     return instance
             else:
                 # This is the real fast path.
                 def instantiate(constructor):
                     instance = constructed_type.__new__(constructed_type)
                     instance.__dict__ = constructor.__dict__.copy()
-                    instance.__init__()
+                    if hasattr(instance, 'construct'):
+                        instance.construct()
                     return instance
 
         # Finish attaching to the constructor type.
@@ -87,6 +98,20 @@ class Constructor:
         # This should only happen if constructed_by wasn't used to attach the
         # specific Constructor type to a class.
         raise TypeError(f"{type(self).__name__} doesn't construct any type.")
+
+
+class Preconstructed:
+    '''
+    A constructor object which just returns copies of a given object.
+    '''
+
+    def __init__(self, to_copy, copy_mode='deep'):
+        self.copy_fn = _copy_mode_to_function(copy_mode)
+        self.to_copy = to_copy
+
+    def __call__(self):
+        return self.copy_fn(self.to_copy)
+
 
 # Simple simulation of deploying a Constructor.
 
@@ -117,6 +142,11 @@ import functools # pylint: disable=C0413
 test_deploy(functools.partial(MyEnv, 'MyEnv'))
 
 
+## Example using Preconstructed (this only works because MyEnv is picklable).
+
+test_deploy(Preconstructed(MyEnv('Preconstructed MyEnv')))
+
+
 ## Example with recommended practices.
 
 class ExampleEnvCon(Constructor):
@@ -134,10 +164,7 @@ class ExampleEnv(ExampleEnvCon):
     # To get better tab completion / pylint output, inherit from
     # ExampleEnvCon, even though we don't need to.
 
-    def __init__(self):
-        # If we inherit, we still don't need to call the Constructor __init__(), so
-        # tell pylint.
-        # pylint: disable=W0231
+    def construct(self):
         print(f"creating ExampleEnv with {self.width}, {self.height}")
         self._world = {}
 
@@ -162,7 +189,7 @@ class MinimalEnv:
     # We probably want the following:
     # pylint: disable=no-member
 
-    def __init__(self):
+    def construct(self):
         print(f"creating MinimalEnv with {self.width}, {self.height}")
         self._world = {}
 
@@ -182,7 +209,7 @@ class RepeatedCon:
 class FirstEnv:
     # pylint: disable=no-member
 
-    def __init__(self):
+    def construct(self):
         print(f"creating FirstEnv with {self.width}, {self.height}")
         self._world = {}
 
@@ -214,8 +241,7 @@ class BothHaveSlotsCon(Constructor):
 class BothHaveSlotsEnv(BothHaveSlotsCon):
     __slots__ = ('width', 'height', '_world')
 
-    def __init__(self):
-        # pylint: disable=W0231
+    def construct(self):
         print(f"creating BothHaveSlotsEnv with {self.width}, {self.height}")
         self._world = {}
 
@@ -237,8 +263,7 @@ class OnlyConSlotsCon(Constructor):
 @constructed_by(OnlyConSlotsCon)
 class OnlyConSlotsEnv(OnlyConSlotsCon):
 
-    def __init__(self):
-        # pylint: disable=W0231
+    def construct(self):
         print(f"creating OnlyConSlotsEnv with {self.width}, {self.height}")
         self._world = {}
 
@@ -260,8 +285,7 @@ class OnlyEnvSlotsCon(Constructor):
 class OnlyEnvSlotsEnv(BothHaveSlotsCon):
     __slots__ = ('width', 'height', '_world')
 
-    def __init__(self):
-        # pylint: disable=W0231
+    def construct(self):
         print(f"creating OnlyEnvSlotsEnv with {self.width}, {self.height}")
         self._world = {}
 
@@ -283,18 +307,20 @@ try:
             return self.width
 
 
-    # Note that inheriting from the WithAttrSlotsCon doesn't work, since
-    # `attr` invokes the constructor's `__init__`. However, it doesn't have
-    # any parameters, which causes the constructor's `__init__` to fail.
-    @attr.s
+    # If using slots=True, attr.s needs to be invoked first, so that
+    # constructed_by sees the slots.
     @constructed_by(WithAttrSlotsCon)
-    class WithAttrEnv:
-        # pylint: disable=no-member
+    @attr.s(slots=True)
+    class WithAttrEnv(WithAttrSlotsCon):
 
         world = attr.ib(factory=dict)
 
         def __attrs_post_init__(self):
+            self.construct()
+
+        def construct(self):
             print(f"creating WithAttrEnv with {self.width}, {self.height}")
+            self.world = {}
 
     test_deploy(WithAttrSlotsCon(width=8))
 except ImportError:
@@ -315,7 +341,7 @@ class CopyEnv:
     # We probably want the following:
     # pylint: disable=no-member
 
-    def __init__(self):
+    def construct(self):
         self.world.append('item')
         print(f"populating world CopyEnv: {self.world}")
 

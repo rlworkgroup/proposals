@@ -45,7 +45,8 @@ class GatherEnv(Serializable):
         self.n_apples = n_apples
         self.n_bombs = n_bombs
 
-            # Always call Serializable constructor last
+        # Serializable constructor is often called last, but should usually be
+        # called first.
         Serializable.quick_init(self, locals())
 ```
 
@@ -88,7 +89,7 @@ class GatherEnvCon:
 @constructed_by(GatherEnvCon)
 class GatherEnv:
 
-    def __init__(self):
+    def construct(self):
         # constructor fields are already set
         for apple in range(self.n_apples):
             ...
