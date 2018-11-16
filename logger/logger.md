@@ -1,20 +1,38 @@
 # GarageLogger
+Proposal by Peter Lillian
 
-The current logger is simply a collection of global variables that needs to be replaced with a new class. I'm calling this new class **GarageLogger**.
+## Background
+
+The current logger is simply a collection of global variables that needs to be replaced with a new object-oriented API that is easier to work with. I'm calling this new class **GarageLogger**.
+
+**Problem Statement**
+The logger interface is a bolt-on, package-gobal mess that isn't multiprocess-aware and fails to conform to garage code 
+
+**Scope**
+This PR encompasses creating a usable logger API for garage that is easily extensible and editable.
+
+**Goals**
+- Remove global scope
+- Wrap logger into singleton class
+- Define simple API
+- Decouple frontend and backend
+
+**Non-Goals**
+- Make the logger 
+
+## Design Overview
+
+**Inputs**
+Text, Key-Value, Snapshots, distributions, etc
+
+**Outputs**
 
 ![GarageLogger](GarageLogger.svg)
 
-I'm planning on using [jruere/multiprocessing-logging](https://github.com/jruere/multiprocessing-logging) to handle multiprocessing. This will make it much easier for all your processes to log to the same place: essentially all it does is wrap a python logger so it plays well in a multiprocessing environment. GarageLogger will abstract all of this away so you don't have to worry about it.
+Each output will be its own implementation of an **OutputType** abstract class, which will contain a multiprocessing logger and handle writing to any outputs assigned. GarageLogger will keep a dictionary of the current OutputTypes. For example: **TextOutput**, **TabularOutput**, or **TensorboardOutput**
 
-The new logger will have one `add_output` method that takes in both the type of output and any arguments needed for that type. Each output will be its own implementation of an **OutputType** abstract class, which will contain a multiprocessing logger and handle writing to any outputs assigned. GarageLogger will keep a dictionary of the current OutputTypes. For example: **TextOutput**, **TabularOutput**, or **TensorboardOutput**
+It will also of course have a `log` method which takes the data to be sent to the logger. The logger will attempt to send the output to all OutputType specified during configuration
 
-It will also of course have a `log` method which takes in both the type of output (text by default) and the data to be sent to the logger. The type will use GarageLogger's dictionary to map to the correct OutputType, to which it will pass the data.
-
-The logger will also have python's standard `debug`, `info`, `warning`, `error`, and `critical` methods (even `checkpoint` as a separate log level?), which will log to the text output by default.
+The logger will also have python's standard `debug`, `info`, `warning`, and `error` methods, which will log to the text output by default.
 
 It will retain functionality such as the prefix stack from the old logger.
-
-Questions for you all:
-- How should checkpoints be added to this system?
-- How should logs coming from separate processes be identified? A simple prefix?
-- Anything else you think I should add?
