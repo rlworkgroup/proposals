@@ -54,8 +54,94 @@ For step 5, There seems to be many options, I'd appreciate all suggestions!
 
 
 
-## Detailed Design (skip for now)
-Component-by-component sections, data, etc., as relevant to the particular system. These should include sketches of credible implementation plans mentioning specific technologies. They don't need to be so detailed that they are equivalent to writing the code.
+## Detailed Design
+Rough outline of script:
+    
+    #pull latest garage -- something like this.
+    git clone https://github.com/rlworkgroup/garage.git 
+
+    #export conda
+    CONDA_SH="${HOME}/miniconda2/etc/profile.d/conda.sh"
+    . "${CONDA_SH}"
+
+    #activate conda
+    conda activate garage
+
+    #work around until GLEW issue is resolved.
+    export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libGLEW.so:/usr/lib/nvidia-390/libGL.so
+
+    #run benchmark
+    nose2 tests.benchmarks.test_benchmark_ddpg
+    
+    echo "done with benchmarks"
+    
+    #copy the results graphs, and json into the display's resources folder.
+    rm -rf garage-dashboard/resources/*
+    cp -r benchmark_ddpg/latest/*.png garage-dashboard/resources
+    cp benchmark_ddpg/latest/results.json garage-dashboard/resources
+    
+    #conda deactivate
+    conda deactivate
+
+
+Display:
+
+To collect the results, I propose we modify each benchmark.py scripts to output a single JSON.  
+    
+     result  = {
+                    "time" : "November 11th 1:24:00",
+                    "branch":"Master",
+                    "graphs":[
+                        "./resources/HalfCheetah-v2_benchmark.png",
+                        "./resources/InvertedDoublePendulum-v2_benchmark.png",
+                        "./resources/Reacher-v2_benchmark.png  ",
+                        "./resources/Walker2d-v2_benchmark.png",
+                        "./resources/Hopper-v2_benchmark.png",       
+                        "./resources/InvertedPendulum-v2_benchmark.png",        
+                        "./resources/Swimmer-v2_benchmark.png",
+                    ]
+                }
+We can then use the JSON in the Angular page below.:
+
+    <!DOCTYPE html>
+    <html>
+        <link rel="stylesheet" type="text/css" href="App.css"/>
+        <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+        <script>
+            var app = angular.module('myApp', []);
+            app.controller('myCtrl', function($scope) {
+                $scope.result  = {
+                    "time" : "November 11th 1:24:00",
+                    "branch":"Master",
+                    "graphs":[
+                        "./resources/HalfCheetah-v2_benchmark.png",
+                        "./resources/InvertedDoublePendulum-v2_benchmark.png",
+                        "./resources/Reacher-v2_benchmark.png  ",
+                        "./resources/Walker2d-v2_benchmark.png",
+                        "./resources/Hopper-v2_benchmark.png",       
+                        "./resources/InvertedPendulum-v2_benchmark.png",        
+                        "./resources/Swimmer-v2_benchmark.png",
+                    ]
+                }
+            });
+        </script>
+
+
+        <body>
+            <div ng-app="myApp" ng-controller="myCtrl">
+                <header class="App-header">Garage Benchmarking</header>
+                <div>
+                    <h2> The results were last updated on: {{result.time}}</h2>
+                    <p> Garage Branch: {{result.branch}}</p>
+                </div>
+                <div class="App-results" ng-repeat="x in result.graphs"> 
+                    <img class="App-graph" src={{x}} />
+                </div>
+            </div>
+        </body>
+    </html>
+
+    
 
 ## Additional Resources Needed (skip for now)
 What new machines, people, money, etc. are needed to complete implementation?
