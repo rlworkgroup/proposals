@@ -60,29 +60,20 @@ Rough outline of script:
     #pull latest garage -- something like this.
     git clone https://github.com/rlworkgroup/garage.git 
 
-    #export conda
-    CONDA_SH="${HOME}/miniconda2/etc/profile.d/conda.sh"
-    . "${CONDA_SH}"
-
-    #activate conda
-    conda activate garage
-
-    #work around until GLEW issue is resolved.
-    export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libGLEW.so:/usr/lib/nvidia-390/libGL.so
-
-    #run benchmark
-    nose2 tests.benchmarks.test_benchmark_ddpg
-    
+    #build and run docker
+    docker build . -t garage-ci -f docker/Dockerfile.ci --build-arg MJKEY="$(cat ~/.mujoco/mjkey.txt)”
+    docker run -e MJKEY="$(cat ~/.mujoco/mjkey.txt)" garage-ci nose2 -c setup.cfg tests.benchmarks.test_benchmark_ddpg
+    docker run -e MJKEY="$(cat ~/.mujoco/mjkey.txt)" garage-ci nose2 -c setup.cfg tests.benchmarks.test_benchmark_her
     echo "done with benchmarks"
-    
-    #copy the results graphs, and json into the display's resources folder.
-    rm -rf garage-dashboard/resources/*
-    cp -r benchmark_ddpg/latest/*.png garage-dashboard/resources
-    cp benchmark_ddpg/latest/results.json garage-dashboard/resources
-    
-    #conda deactivate
-    conda deactivate
 
+At this point, there are 2 options to display the results
+
+1 - Copy the results to the host file system, render the display on host, and deploy to web.
+
+    docker container cp CONTAINER:/root/results garage-dashboard/resources
+    
+    
+2- render display from inside docker container, and deploy to web.
 
 Display:
 
