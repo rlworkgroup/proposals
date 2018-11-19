@@ -91,18 +91,27 @@ To collect the results, I propose we modify each benchmark.py scripts to output 
      result  = {
                     "time" : "November 11th 1:24:00",
                     "branch":"Master",
-                    "graphs":[
-                        "./resources/HalfCheetah-v2_benchmark.png",
-                        "./resources/InvertedDoublePendulum-v2_benchmark.png",
-                        "./resources/Reacher-v2_benchmark.png  ",
-                        "./resources/Walker2d-v2_benchmark.png",
-                        "./resources/Hopper-v2_benchmark.png",       
-                        "./resources/InvertedPendulum-v2_benchmark.png",        
-                        "./resources/Swimmer-v2_benchmark.png",
-                    ]
+                    "data":{
+                        "Cheetah":{
+                            "baselines":{...},
+                            "garage":{...},
+                        },
+                        "Swimmer":{
+                            "baselines":{...},
+                            "garage":{...},
+                        },
+                        "Reacher":{
+                            "baselines":{...},
+                            "garage":{...},
+                        },
+                    }
                 }
-We can then use the JSON in the Angular page below.:
-
+We can then use the JSON to Plot, and display in the Angular page below.:
+Plotting:
+    Some open source JS plotting libs.
+    https://plot.ly/javascript/getting-started/
+    https://github.com/chartjs/Chart.js
+    
     <!DOCTYPE html>
     <html>
         <link rel="stylesheet" type="text/css" href="App.css"/>
@@ -113,15 +122,20 @@ We can then use the JSON in the Angular page below.:
                 $scope.result  = {
                     "time" : "November 11th 1:24:00",
                     "branch":"Master",
-                    "graphs":[
-                        "./resources/HalfCheetah-v2_benchmark.png",
-                        "./resources/InvertedDoublePendulum-v2_benchmark.png",
-                        "./resources/Reacher-v2_benchmark.png  ",
-                        "./resources/Walker2d-v2_benchmark.png",
-                        "./resources/Hopper-v2_benchmark.png",       
-                        "./resources/InvertedPendulum-v2_benchmark.png",        
-                        "./resources/Swimmer-v2_benchmark.png",
-                    ]
+                    "data":{
+                        "Cheetah":{
+                            "baselines":{...},
+                            "garage":{...},
+                        },
+                        "Swimmer":{
+                            "baselines":{...},
+                            "garage":{...},
+                        },
+                        "Reacher":{
+                            "baselines":{...},
+                            "garage":{...},
+                        },
+                    }
                 }
             });
         </script>
@@ -171,5 +185,5 @@ These tools provide the same workflow management features that we would implemen
 For deploying webpages:
 There are a lot of options here.
 #### Amazon S3 
-May cost around $0.50 cents per month.  Github pages would require us to commit/push our results into a repo, which might be more complicated than Amazons workflow.
+May cost around $0.50 per month.  Github pages would require us to commit/push our results into a repo, which might be more complicated than Amazons workflow.
     
