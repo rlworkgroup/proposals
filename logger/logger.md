@@ -21,6 +21,7 @@ A good logger should support many different input types and flawlessly handle al
 ## Design Overview
 
 **Inputs**
+
 Text, Key-Value, Snapshots, distributions, etc
 
 **Outputs**
