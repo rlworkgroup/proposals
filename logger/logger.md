@@ -1,4 +1,4 @@
-# GarageLogger
+# Logger
 Proposal by Peter Lillian
 
 ## Background
