@@ -81,7 +81,7 @@ class GeneralizedWorld(MultiObservationWorld, MultiTransitionWorld,
                  reward_functions=None,
                  termination_functions=None):
 
-        self._pomdp_space = gym.spaces.Dict()
+        self.pomdp_space = gym.spaces.Dict()
 
         if observation_functions:
             MultiObservationWorld.__init__(self, *observation_functions)

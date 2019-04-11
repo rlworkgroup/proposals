@@ -1,7 +1,7 @@
 # Title
 | Author | Date Proposed | Last Updated |
 |---|---|---|
-| Ryan Julian | 4/6/2019 | 4/6/2019 |
+| Ryan Julian | 4/6/2019 | 4/11/2019 |
 
 ## Background
 
@@ -33,12 +33,6 @@ class World(gym.Env, metaclass=abc.ABCMeta):
     """Represents a family of (PO)MDPs implementing the :obj:`gym.Env`
     interface.
     """
-
-    @classmethod
-    def with_pomdp(cls, pomdp_descriptor):
-        """Construct a :obj:`World` from a :obj:`POMDPDescriptor`.
-        """
-        pass
 
     @property
     def pomdp(self):
@@ -88,9 +82,99 @@ class ParametricWorld(World, metaclass=abc.ABCMeta):
         self._pomdp = pomdp_descriptor
 ```
 
+## Common Meta-RL Scenarios
+Below are some examples of common meta-RL scenarios, as implemented under this interface. All of them can be sampled using example the same training loop:
+```python
+from some.where import MostExcellentWorld
+
+world = MostExcellentWorld()
+world.reset()
+
+for _ in range(num_batches):
+    batch_samples = []
+    for _ in range(envs_per_batch)
+        pomdp = world.pomdp_space.sample()
+        env_samples = sample_environment(env)
+        batch_samples.append(env_samples)
+
+    algo.train_batch(batch_samples)
+```
+### Goal-Conditioned Worlds
+```python
+class GoalConditionedWorld(ParametricWorld):
+    """A World whose POMDP is characterized by a start state and a goal
+    state.
+
+    Args:
+        start_space (:obj:`gym.Space`): A space representing valid start
+            states.
+        goal_space (:obj:`gym.Space`): A space represnting valid goal states.
+    """
+
+    def __init__(self, start_space, goal_space):
+        self.pomdp_space = gym.spaces.Dict({
+            'start': start_space,
+            'goal': goal_space,
+        })
+```
+
+### Multi-Task Learinng (with arbitrary reward functions)
+```python
+class MultiTaskWorld(ParametricWorld):
+    """A World whose POMDP is characterized by a discrete set of reward
+    functions.
+
+    Args:
+        *reward_functions (``Callable``): A variable-length argument list of
+            one or more reward functions.
+    """
+
+    def __init__(self, *reward_functions):
+        self._reward_functions = reward_functions
+        self.pomdp_space = gym.spaces.Discrete(len(self._reward_functions))
+
+    @property
+    def _reward(self):
+        return self._reward_functions[self._pomdp]
+```
+
+### Dynamics Transfer
+Note that using the training loop above with this `World` implements dynamics randomization.
+
+```python
+class MutableDynamicsWorld(ParametricWorld):
+    """A World whose POMDP is characterized by a set of mutable dynamics
+    parameters.
+
+    Attributes:
+        dynamics_space: (:obj:`gym.spaces.Dict`): A :obj:`gym.spaces.Dict`
+            whose keys represent dynamics parameters, with corresponding spaces
+            for their valid values.
+    """
+    def __init__(self):
+        self.pomdp_space = self.dynamics_space
+
+    def set_dynamics(self, parameters):
+        """Set the dynamic parameters of the simulation.
+
+        Args:
+            parameters (dict): A dictionary whose keys are parameter
+                identifiers and whose values are parameter values.
+        """
+        pass
+
+    @property
+    def pomdp(self):
+        return self._pomdp
+
+    @pomdp.setter
+    def pomdp(self, pomdp):
+        self.set_dynamics(pomdp)
+```
+
 ## Detailed Design
 ### From `gym.Env` to `World`
-This design does require rewriting small portions of existing enviroments.  Lets take a look a how we can turn a simple point-mass environment into a world.
+Lets take a look a how we can turn a simple point-mass environment into a `World`.
 
 We begin with the lowly point-mass environment.
 ```python
@@ -472,6 +556,42 @@ This is the most common solution for defining a meta-RL environment. It doesn't 
 For an example of this pattern, see the [PointEnv](https://github.com/ryanjulian/embed2learn/blob/90b2feda918fb27335c3236a9fe81659a3ac6547/envs/point_env.py) in ryanjulian/embed2learn.
 
 ### gym.GoalEnv
-This has not worked out in practice, though I should enumerate in more detail why later.
+This is an excellent abstraction for goal-conditioned meta-RL, but not all meta-RL algorithms are goal-conditioned. Any `gym.GoalEnv` can easily be wrapped to make a goal-conditioned `World` as long as it provides a `set_goal()` API.
 
-For an example of this pattern, see [PickAndPlaceEnv](https://github.com/rlworkgroup/gym-sawyer/blob/a9e9a2edcf932276c61b0873d019b2ef717cc604/sawyer/mujoco/pick_and_place_env.py) from rlworkgroup/gym-sawyer.
+For an example of this pattern, see [MultitaskEnv](https://github.com/vitchyr/multiworld/blob/b4ce7ecc0af5cbb8148f62f8731ddede55c4b131/multiworld/core/multitask_env.py) from vitchyr/multiworld.
+
+```python
+class GoalEnvWrapper(ParametricWorld, gym.Wrapper):
+    """
+    World interface
+    """
+
+    def __init__(self, env):
+        assert isinstance(env, gym.GoalEnv), (
+            'This class only supports wrapping gym.GoalEnv')
+        super().__init__(env)
+        self.pomdp_space = self.env.observation_space.spaces['desired_goal']
+
+    @property
+    def pomdp(self):
+        return self.env.get_goal()
+
+    @pomdp.setter
+    def pomdp(self, pomdp_descriptor):
+        self._validate_descriptor(pomdp_descriptor)
+        if hasattr(self.env, 'set_goal'):
+            self.env.set_goal(pomdp_descriptor)
+        else:
+            warnings.warn('{} does not implement "set_goal".'
+                          'Not able to change the POMDP')
+
+    """
+    gym.Wrapper interface
+    """
+    def step(self, action):
+        return self.env.step(action)
+
+    def reset(self):
+        return self.reset()
+```
+

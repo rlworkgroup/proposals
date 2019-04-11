@@ -22,10 +22,17 @@ def print_pomdp(pomdp):
 
 def print_reset(state):
     print('--- reset ---')
-    print('state: [{:.2f}, {:.2f}]\treward: -\tdone: -'.format(*state))
 
+    if isinstance(state, np.ndarray):
+        print('state: {}\treward: -\tdone: -'.format(state2str(state)))
 
 def print_step(step):
     s, r, d, _ = step
-    print('state: [{:.2f}, {:.2f}]\treward: {:.2f}\tdone: {}'.format(*s, r, d))
+    print('state: {}\treward: {:.2f}\tdone: {}'.format(state2str(s), r, d))
     time.sleep(0.1)
+
+def state2str(state):
+    if isinstance(state, np.ndarray) and len(state) == 2:
+        return '[{:.2f}, {:.2f}]'.format(*state)
+    else:
+        return pprint.pformat(state)

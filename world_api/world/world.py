@@ -37,7 +37,7 @@ class POMDPDescriptor(abc.ABC):
             >>> d = BestDescriptor()
             >>> assert d == json.loads(json.dumps(d))
         * **Immutable**. This is difficult to implement in Python without
-          making the interface cumbersome to use, but a :obj:`World` should 
+          making the interface cumbersome to use, but a :obj:`World` should
           treat a :obj:`POMDPDescriptor` as though it is immutable, and may
           exhibit undefined behavior if the :obj:`POMDPDescriptor` is mutated.
     """
@@ -50,32 +50,20 @@ class BaseWorld(gym.Env, metaclass=abc.ABCMeta):
 
     A :obj:`World` executes a *single* POMDP at any given time.
 
-    The family of POMDPs a :obj:`World` represents is encoded by a POMDP 
+    The family of POMDPs a :obj:`World` represents is encoded by a POMDP
     descriptor. The descriptor encodes all variations of the POMDPs in this
-    :obj:`World`. The descriptor may be any pickleable object. 
+    :obj:`World`. The descriptor may be any pickleable object.
 
     No API other than :obj:`World.pomdp` should change the current POMDP. That
     is, a :obj:`World` should not mutate its POMDP as a result of calling
-    :obj:`step()`, :obj:`reset()`, or any other API. Following from above, 
+    :obj:`step()`, :obj:`reset()`, or any other API. Following from above,
     :obj:`__init__()` should not have parameters which change the POMDP
     behavior.
+
+    It is preferred that calling :obj:`reset()` is not required after setting
+    `pomdp` (i.e. changing the POMDP does not change the hidden state), but if
+    a :obj:`World` imposes this requirement, it should be clearly documented.
     """
-
-    @classmethod
-    @abc.abstractmethod
-    def with_pomdp(cls, pomdp_descriptor):
-        """Construct a :obj:`World` from a :obj:`POMDPDescriptor`.
-
-        Args:
-            pomdp_descriptor (:obj:`POMDPDescriptor`): An object representing a
-            POMDP in this :obj:`World`
-
-        Returns:
-            A new instance of this :obj:`World` which executes the POMDP
-            represented by `pomdp_descriptor`
-        """
-        pass
-
     @property
     @abc.abstractmethod
     def pomdp(self):
@@ -94,8 +82,19 @@ class BaseWorld(gym.Env, metaclass=abc.ABCMeta):
 
 
 class World(BaseWorld, metaclass=abc.ABCMeta):
+
     @classmethod
-    def with_pomdp(cls, pomdp_descriptor):
+    def from_pomdp(cls, pomdp_descriptor):
+        """Construct a :obj:`World` from a :obj:`POMDPDescriptor`.
+
+        Args:
+            pomdp_descriptor (:obj:`POMDPDescriptor`): An object representing a
+            POMDP in this :obj:`World`
+
+        Returns:
+            A new instance of this :obj:`World` which executes the POMDP
+            represented by `pomdp_descriptor`
+        """
         world = cls()
         world.pomdp = descriptor
         return world
@@ -123,13 +122,11 @@ class World(BaseWorld, metaclass=abc.ABCMeta):
 class ParametricWorld(World, metaclass=abc.ABCMeta):
     """A :obj:`World` whose POMDPs can be described by a :obj:`gym.Space`
     object.
-    """
 
-    @property
-    def pomdp_space(self):
-        """A :obj:`gym.Space` which describes POMDP descriptors for this
-        :obj:`ParametricWorld`."""
-        return self._pomdp_space
+    Attributes:
+        pomdp_space (:obj:`gym.Space`): A space which describes valid POMDP
+            descriptors for this :obj:`ParametricWorld`.
+    """
 
     @property
     def pomdp(self):
@@ -137,11 +134,12 @@ class ParametricWorld(World, metaclass=abc.ABCMeta):
 
     @pomdp.setter
     def pomdp(self, pomdp_descriptor):
+        self._validate_descriptor(pomdp_descriptor)
+        self._pomdp = pomdp_descriptor
+
+    def _validate_descriptor(self, pomdp_descriptor):
         if not self.pomdp_space.contains(pomdp_descriptor):
             raise ValueError('descriptor must be in the space:\n'
                              '\t{}\n'
                              '\t...but you provided: \n'
-                             '\t{}'.format(
-                                 pprint.pformat(self.pomdp_space),
-                                 pprint.pformat(pomdp_descriptor)))
-        self._pomdp = pomdp_descriptor
+                             '\t{}'.format(self.pomdp_space, pomdp_descriptor))
